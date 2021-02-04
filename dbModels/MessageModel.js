@@ -6,7 +6,7 @@ const messageSchema = new Schema({
     messageText: String,
     messageRoomName: String,
     messageTime: Date,
-    messageSystem: Boolean,
+    messageIsSystem: Boolean,
     messageSender: String
 }, {collection : 'messages'})
 

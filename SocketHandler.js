@@ -1,7 +1,7 @@
 import { Server } from "socket.io";
 import {Message, UserMessage} from "./Message.js";
 import Logger from "./Logger.js";
-import MessageModel from "./messageModel.js";
+import MessageModel from "./dbModels/MessageModel.js";
 
 class SocketHandler{
     /**
@@ -48,7 +48,7 @@ class SocketHandler{
      *
      * Method handles socket connection and response for incoming events. Logs incoming events to console.
      */
-    handleConnection(){
+    async handleConnection(){
         this._io.on('connect', socket => {
             Logger.userConnectedToServer(socket.id, socket.handshake.query.clientName)
             socket.emit('connected', `You have connected to server`)

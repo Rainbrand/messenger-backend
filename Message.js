@@ -11,7 +11,7 @@ export class Message{
             messageText: this.text,
             messageRoomName: this.roomName,
             messageTime: this.timestamp,
-            messageSystem: this.isSystem
+            messageIsSystem: this.isSystem
         }
     }
 
@@ -31,7 +31,7 @@ export class UserMessage extends Message{
             messageRoomName: this.roomName,
             messageText: this.text,
             messageSender: this.sender,
-            messageSystem: this.isSystem
+            messageIsSystem: this.isSystem
         }
     }
 }
