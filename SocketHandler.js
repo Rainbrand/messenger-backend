@@ -221,7 +221,6 @@ class SocketHandler{
      * @param socket - current socket.
      *
      * Method handles removing socket from server storage, i.e. removing socket from chat room record.
-     * Logs information in console.
      */
     removeUserFromServerStorage(args, socket){
         const currentUsers = this._chatUsers.get(args.roomName)
@@ -248,7 +247,8 @@ class SocketHandler{
                 this._chatUsers.set(room[0], room[1])
             }
             const message = new Message(`User ${socket.handshake.query.clientName} has disconnected`, room[0])
-            this._io.to(room[0]).emit('user_left_chat', message.toJson())
+            Logger.userDisconnected(socket.handshake.query.clientName, socket.id, room[0])
+            this._io.to(room[0]).emit('user_list_changed', message.toJson())
             this._io.to(room[0]).emit('room_users_list', {  //TODO: refactor
                 chatUsers: this._chatUsers.get(room[0]),
                 roomName: room[0]

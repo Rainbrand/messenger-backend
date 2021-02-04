@@ -30,6 +30,10 @@ class Logger{
     static newMessageInRoom(username, userId, text, room){
         console.log(`New message '${text}' from user ${username} with id ${userId} to room ${room}.`)
     }
+
+    static userDisconnected(username, userId, room){
+        console.log(`User ${username} with id ${userId} has been disconnected from room ${room}.`)
+    }
 }
 
 export default Logger
