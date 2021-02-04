@@ -1,4 +1,6 @@
-const socketio = require('socket.io')
+import { Server } from "socket.io";
+import {Message, UserMessage} from "./Message.js";
+import Logger from "./Logger.js";
 
 class SocketHandler{
     /**
@@ -16,7 +18,7 @@ class SocketHandler{
          * @type {*}
          * @private
          */
-        this._io = socketio(server, {
+        this._io = new Server(server, {
             cors: {
                 origin: client,
                 methods: ["POST", "GET"]
@@ -47,43 +49,31 @@ class SocketHandler{
      */
     handleConnection(){
         this._io.on('connect', socket => {
+            Logger.userConnectedToServer(socket.id, socket.handshake.query.clientName)
             socket.emit('connected', `You have connected to server`)
-            console.log(`User ${socket.handshake.query.clientName} with ID ${socket.id} has connected`)
 
             socket.on('join_room', args => {
-                console.log("join_room event invoked")
+                Logger.eventInvoked('join_room')
                 this.joinRoom(args, socket)
             })
             socket.on('add_room', args => {
-                console.log("add_room event invoked")
+                Logger.eventInvoked('add_room')
                 this.addRoom(args, socket)
             })
             socket.on('new_message', args => {
-                console.log("new_message event invoked")
+                Logger.eventInvoked('new_message')
                 this.newMessage(args, socket)
             })
             socket.on('leave_room', args => {
-                console.log("leave_room event invoked")
+                Logger.eventInvoked('leave_room')
                 this.leaveRoom(args, socket)
             })
             socket.on('disconnect', () => {
-                console.log('disconnect event invoked')
+                Logger.eventInvoked('disconnect')
                 this.disconnectUser(socket)
             })
         })
     }
-
-    /**
-     * @method getId()
-     *
-     * Method creates unique ID
-     *
-     * @returns {string}
-     */
-    getId(){
-        return Math.random().toString(36).substr(2, 15)
-    }
-
 
     /**
      * @method leaveRoom()
@@ -102,13 +92,10 @@ class SocketHandler{
     leaveRoom(args, socket){
         socket.leave(args.roomName)
         this.removeUserFromServerStorage(args, socket)
-        console.log(`User ${socket.handshake.query.clientName} has left room ${args.roomName}`)
-        socket.to(args.roomName).emit('user_left_chat', {
-            messageId: this.getId(),
-            messageText: `User ${socket.handshake.query.clientName} has left chat`,
-            messageRoomName: args.roomName,
-            messageSystem: true
-        })
+        Logger.userLeftRoom(socket.handshake.query.clientName, socket.id, args.roomName)
+        const message = new Message(`User ${socket.handshake.query.clientName} has left chat`, args.roomName)
+        Logger.newSystemMessage(message.text, message.roomName)
+        socket.to(args.roomName).emit('user_left_chat', message.toJson())
         this._io.to(args.roomName).emit('room_users_list', {
             chatUsers: this._chatUsers.get(args.roomName),
             roomName: args.roomName
@@ -141,16 +128,13 @@ class SocketHandler{
             if (this._rooms.has(args.roomName)) {
                 socket.join(args.roomName)
                 this.addUserToServerStorage(args, socket)
-                console.log(`Socket ${socket.handshake.query.clientName} has joined ${args.roomName} room`)
+                Logger.userJoinedRoom(socket.handshake.query.clientName, socket.id, args.roomName)
                 socket.emit('room_joined', { //roomName is unique so React will render them correctly
                     roomName: args.roomName,
                 })
-                socket.to(args.roomName).emit('new_message_in_room', {
-                    messageId: this.getId(),
-                    messageText: `User ${socket.handshake.query.clientName} has joined chat room`,
-                    messageRoomName: args.roomName,
-                    messageSystem: true
-                })
+                const message = new Message(`User ${socket.handshake.query.clientName} has joined chat room`, args.roomName)
+                Logger.newSystemMessage(message.text, message.roomName)
+                socket.to(args.roomName).emit('new_message_in_room', message.toJson())
                 this._io.to(args.roomName).emit('room_users_list', {
                     chatUsers: this._chatUsers.get(args.roomName),
                     roomName: args.roomName
@@ -200,13 +184,13 @@ class SocketHandler{
      */
     addRoom(args, socket){
         if (this._rooms.has(args.roomName)){
-            console.log(`Room ${args.roomName} already exist`)
+            Logger.roomAlreadyExist(socket.handshake.query.clientName, socket.id, args.roomName)
             socket.emit('room_already_exist', "Room with this name already exist")
         } else {
             this._rooms.add(args.roomName)
             socket.join(args.roomName)
             this.addUserToServerStorage(args, socket)
-            console.log(`Room ${args.roomName} has been created`)
+            Logger.roomCreated(socket.handshake.query.clientName, socket.id, args.roomName)
             socket.emit('room_created', {
                 roomName: args.roomName
             })
@@ -246,7 +230,6 @@ class SocketHandler{
             currentUsers.splice(userIndex, 1)
             this._chatUsers.set(args.roomName, currentUsers)
         }
-        console.log(`User ${args.userId} has left room ${args.roomName}`)
     }
 
     /**
@@ -264,13 +247,9 @@ class SocketHandler{
                 else room[1].splice(userIndex, 1)
                 this._chatUsers.set(room[0], room[1])
             }
-            this._io.to(room[0]).emit('user_left_chat', {
-                messageId: this.getId(),
-                messageText: `User ${socket.handshake.query.clientName} has disconnected`,
-                messageRoomName: room[0],
-                messageSystem: true
-            })
-            this._io.to(room[0]).emit('room_users_list', {
+            const message = new Message(`User ${socket.handshake.query.clientName} has disconnected`, room[0])
+            this._io.to(room[0]).emit('user_left_chat', message.toJson())
+            this._io.to(room[0]).emit('room_users_list', {  //TODO: refactor
                 chatUsers: this._chatUsers.get(room[0]),
                 roomName: room[0]
             })
@@ -286,17 +265,10 @@ class SocketHandler{
      * @emits new_message_in_room - adds fields to message and fires to all sockets connected to room.
      */
     newMessage(args, socket){
-        const message = new Message(args.messageText, args.roomName, socket.handshake.query.clientName)
-        console.log(`New message '${args.messageText}' from ${socket.handshake.query.clientName} to room ${args.messageRoomName}`)
-        this._io.in(args.messageRoomName).emit('new_message_in_room', {
-            messageId: this.getId(),
-            messageTime: new Date().toUTCString(),
-            messageRoomName: args.messageRoomName,
-            messageText: args.messageText,
-            messageSender: socket.handshake.query.clientName,
-            messageSystem: args.system
-        })
+        const message = new UserMessage(args.messageText, args.messageRoomName, socket.handshake.query.clientName)//TODO: change clientName to ID
+        Logger.newMessageInRoom(socket.handshake.query.clientName, socket.id, args.messageText, args.roomName)
+        this._io.in(args.messageRoomName).emit('new_message_in_room', message.toJson())
     }
 }
 
-module.exports = SocketHandler
+export default SocketHandler
