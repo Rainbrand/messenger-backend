@@ -95,7 +95,7 @@ class SocketHandler{
         Logger.userLeftRoom(socket.handshake.query.clientName, socket.id, args.roomName)
         const message = new Message(`User ${socket.handshake.query.clientName} has left chat`, args.roomName)
         Logger.newSystemMessage(message.text, message.roomName)
-        socket.to(args.roomName).emit('user_left_chat', message.toJson())
+        socket.to(args.roomName).emit('user_list_changed', message.toJson())
         this._io.to(args.roomName).emit('room_users_list', {
             chatUsers: this._chatUsers.get(args.roomName),
             roomName: args.roomName
@@ -134,7 +134,7 @@ class SocketHandler{
                 })
                 const message = new Message(`User ${socket.handshake.query.clientName} has joined chat room`, args.roomName)
                 Logger.newSystemMessage(message.text, message.roomName)
-                socket.to(args.roomName).emit('new_message_in_room', message.toJson())
+                socket.to(args.roomName).emit('user_list_changed', message.toJson())
                 this._io.to(args.roomName).emit('room_users_list', {
                     chatUsers: this._chatUsers.get(args.roomName),
                     roomName: args.roomName
