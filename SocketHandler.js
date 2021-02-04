@@ -1,6 +1,7 @@
 import { Server } from "socket.io";
 import {Message, UserMessage} from "./Message.js";
 import Logger from "./Logger.js";
+import MessageModel from "./messageModel.js";
 
 class SocketHandler{
     /**
@@ -267,9 +268,11 @@ class SocketHandler{
      *
      * @emits new_message_in_room - adds fields to message and fires to all sockets connected to room.
      */
-    newMessage(args, socket){
+    async newMessage(args, socket){
         const message = new UserMessage(args.messageText, args.messageRoomName, socket.handshake.query.clientName)//TODO: change clientName to ID
         Logger.newMessageInRoom(socket.handshake.query.clientName, socket.id, args.messageText, args.roomName)
+        const dbMessageModel = new MessageModel(message.toJson())
+        await dbMessageModel.save()
         this._io.in(args.messageRoomName).emit('new_message_in_room', message.toJson())
     }
 }

@@ -1,6 +1,5 @@
 export class Message{
     constructor(text, roomName) {
-        this.id = Math.random().toString(36).substr(2, 15);
         this.text = text;
         this.roomName = roomName;
         this.timestamp = new Date().toUTCString();
@@ -9,10 +8,9 @@ export class Message{
 
     toJson(){
         return {
-            messageId: this.id,
-            messageTime: this.timestamp,
-            messageRoomName: this.roomName,
             messageText: this.text,
+            messageRoomName: this.roomName,
+            messageTime: this.timestamp,
             messageSystem: this.isSystem
         }
     }

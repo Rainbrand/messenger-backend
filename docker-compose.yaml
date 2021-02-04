@@ -1,0 +1,25 @@
+version: "3"
+services:
+  mongo:
+    image: mongo
+    restart: always
+    ports:
+      - 9001:27017
+    expose:
+      - 9001
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: root
+      MONGO_INITDB_ROOT_PASSWORD: example
+  mongo-express:
+    image: mongo-express
+    restart: always
+    ports:
+      - 9002:8081
+    expose:
+      - 9002
+    depends_on:
+      - mongo
+    environment:
+      ME_CONFIG_MONGODB_ADMINUSERNAME: root
+      ME_CONFIG_MONGODB_ADMINPASSWORD: example
+      ME_CONFIG_MONGODB_PORT: 27017
