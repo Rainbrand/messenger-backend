@@ -86,8 +86,8 @@ class SocketHandler{
      * removes socket from room and server storage of connected users.
      * Logs information about event in console.
      *
-     * @emits user_left_chat - sends system info message for everyone left in room
-     * @emits room_users_list - sends actual list of connected users for the rest in room
+     * @emits user_list_changed - sends new system message about joined user.
+     * @emits room_users_list - sends actual list of connected users for the rest in room.
      */
     leaveRoom(args, socket){
         socket.leave(args.roomName)
@@ -117,8 +117,7 @@ class SocketHandler{
      *
      * @emits room_joined - emits only for connecting socket if desired room is present.
      * Contains roomName argument with connected room name. 'Successful' event.
-     * @emits new_message_in_room - sends new system message to all socket in room expect newly connected about
-     * connected socket. Contains message info with unique messageID, message text, time and room. 'Successful' event.
+     * @emits user_list_changed - sends new system message about joined user. 'Successful' event.
      * @emits room_users_list - sends updated list with users connected to this room for
      * everyone in room. 'Successful' event.
      * @emits room_not_exit - fires only if room is not present on server. Contains error text. 'Unsuccessful' event.
@@ -149,7 +148,7 @@ class SocketHandler{
      * @method userAlreadyInRoom()
      * @param args - argument containing a unique room name.
      * @param socket - current socket.
-     * @returns {boolean} returns 'true' if user is already joined and 'false' if not
+     * @returns {boolean} returns 'true' if user is already joined and 'false' if not.
      */
     userAlreadyInRoom(args, socket){
         const currentUsers = this._chatUsers.get(args.roomName)
@@ -236,6 +235,9 @@ class SocketHandler{
      * @param socket - current socket.
      *
      * Method handles removing disconnected user from user lists in all rooms.
+     *
+     * @emits user_list_changed - sends new system message about disconnected user.
+     * @emits room_users_list - sends updated list with users connected to this room for everyone in room.
      */
     disconnectUser(socket){
         for (let room of this._chatUsers.entries()){
@@ -248,6 +250,7 @@ class SocketHandler{
             }
             const message = new Message(`User ${socket.handshake.query.clientName} has disconnected`, room[0])
             Logger.userDisconnected(socket.handshake.query.clientName, socket.id, room[0])
+            Logger.newSystemMessage(message.text, room[0])
             this._io.to(room[0]).emit('user_list_changed', message.toJson())
             this._io.to(room[0]).emit('room_users_list', {  //TODO: refactor
                 chatUsers: this._chatUsers.get(room[0]),
